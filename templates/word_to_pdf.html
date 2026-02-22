@@ -52,7 +52,8 @@ document.getElementById("wordToPdfForm").addEventListener("submit", async functi
     try {
         const response = await fetch("/word-to-pdf", {
             method: "POST",
-            body: formData
+            body: formData,
+            credentials: "include"
         });
 
         loader.classList.add("hidden");
