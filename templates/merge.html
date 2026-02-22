@@ -38,7 +38,8 @@ document.getElementById("mergeForm").addEventListener("submit", async function(e
 
     const response = await fetch("/merge", {
         method: "POST",
-        body: formData
+        body: formData,
+        credentials: "include"
     });
 
     loader.classList.add("hidden");
