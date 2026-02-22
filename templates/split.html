@@ -73,7 +73,8 @@ document.getElementById("splitForm").addEventListener("submit", async function(e
     try {
         const response = await fetch("/split", {
             method: "POST",
-            body: formData
+            body: formData,
+            credentials: "include"
         });
 
         loader.classList.add("hidden");
