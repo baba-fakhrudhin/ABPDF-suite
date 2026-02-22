@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="text-center mb-10">
+    <h1 class="text-4xl font-extrabold mb-4 bg-gradient-to-r from-orange-500 to-red-600 bg-clip-text text-transparent">
+        PDF to Word
+    </h1>
+    <p class="text-gray-500 text-lg">
+        Convert your PDF into an editable Word document (.docx).
+    </p>
+</div>
+
+<div class="bg-white p-10 rounded-3xl shadow-2xl max-w-2xl mx-auto border border-gray-100">
+
+    <form id="pdfToWordForm" class="space-y-6">
+
+        <div>
+            <label class="block font-semibold mb-2">Upload PDF File</label>
+            <input 
+                type="file" 
+                name="file" 
+                accept=".pdf"
+                required 
+                class="w-full border p-4 rounded-xl focus:ring-2 focus:ring-orange-500 transition"
+            >
+        </div>
+
+        <button type="submit"
+            class="w-full py-4 rounded-2xl text-white font-bold text-lg 
+                   bg-gradient-to-r from-orange-500 to-red-600 
+                   hover:scale-105 hover:shadow-xl transition duration-300">
+            Convert to Word
+        </button>
+    </form>
+
+    <div id="loader" class="hidden mt-8 text-center">
+        <div class="animate-spin h-14 w-14 border-4 border-orange-500 border-t-transparent rounded-full mx-auto"></div>
+        <p class="mt-4 text-gray-600 font-medium">Converting your file...</p>
+    </div>
+
+</div>
+
+<script>
+document.getElementById("pdfToWordForm").addEventListener("submit", async function(e) {
+    e.preventDefault();
+
+    const loader = document.getElementById("loader");
+    loader.classList.remove("hidden");
+
+    const formData = new FormData(this);
+
+    try {
+        const response = await fetch("/pdf-to-word", {
+            method: "POST",
+            body: formData
+        });
+
+        loader.classList.add("hidden");
+
+        if (!response.ok) {
+            const err = await response.json();
+            alert(err.error || "Conversion failed");
+            return;
+        }
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "converted.docx";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+
+    } catch (error) {
+        loader.classList.add("hidden");
+        alert("Server error. Please try again.");
+    }
+});
+</script>
+
+{% endblock %}

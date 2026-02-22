@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h1 class="text-3xl font-bold mb-4">Add Watermark</h1>
+<p class="text-gray-400 mb-8">
+Add a text or image watermark to your PDF.
+</p>
+
+<div class="bg-gray-800 p-8 rounded-2xl shadow-xl">
+
+    <!-- PDF Upload -->
+    <div id="pdfDrop"
+         class="border-2 border-dashed border-purple-500 rounded-xl p-8 text-center cursor-pointer hover:bg-gray-700 transition mb-6">
+        <p class="text-gray-300">Drag & Drop your PDF here</p>
+        <p class="text-sm text-gray-500 mt-1">or click to browse</p>
+        <input type="file" id="pdfFile" accept=".pdf" hidden>
+    </div>
+
+    <!-- Watermark Type Selection -->
+    <div class="flex gap-6 mb-4">
+
+        <label class="flex items-center gap-2 cursor-pointer">
+            <input type="radio" name="wmType" value="text" checked class="accent-purple-500">
+            <span>Text Watermark</span>
+        </label>
+
+        <label class="flex items-center gap-2 cursor-pointer">
+            <input type="radio" name="wmType" value="image" class="accent-purple-500">
+            <span>Image Watermark</span>
+        </label>
+
+    </div>
+
+    <!-- Text Input -->
+    <div id="textSection">
+        <input type="text"
+               id="textInput"
+               value="AB-PDF Suite"
+               class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 focus:ring-2 focus:ring-purple-500 text-white"
+               placeholder="Enter watermark text">
+    </div>
+
+    <!-- Image Input -->
+    <div id="imageSection" class="hidden mt-4">
+        <input type="file"
+               id="imageInput"
+               accept="image/*"
+               class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white">
+    </div>
+
+    <!-- Button -->
+    <button id="watermarkBtn"
+            class="mt-6 w-full py-3 rounded-xl font-semibold 
+                   bg-gradient-to-r from-purple-600 to-pink-600
+                   hover:opacity-90 transition shadow-lg">
+        Apply Watermark
+    </button>
+
+    <!-- Loader -->
+    <div id="loader" class="hidden text-center mt-6">
+        <div class="animate-spin rounded-full h-10 w-10 border-4 border-purple-500 border-t-transparent mx-auto"></div>
+        <p class="mt-2 text-gray-400">Processing...</p>
+    </div>
+
+</div>
+
+<script>
+const pdfDrop = document.getElementById("pdfDrop");
+const pdfFile = document.getElementById("pdfFile");
+const textSection = document.getElementById("textSection");
+const imageSection = document.getElementById("imageSection");
+const radios = document.querySelectorAll('input[name="wmType"]');
+const watermarkBtn = document.getElementById("watermarkBtn");
+const loader = document.getElementById("loader");
+
+let selectedPDF = null;
+
+pdfDrop.addEventListener("click", () => pdfFile.click());
+
+pdfFile.addEventListener("change", () => {
+    selectedPDF = pdfFile.files[0];
+    pdfDrop.innerHTML = `<p class="text-green-400 font-medium">${selectedPDF.name}</p>`;
+});
+
+radios.forEach(radio => {
+    radio.addEventListener("change", () => {
+
+        if (radio.value === "text") {
+            textSection.classList.remove("hidden");
+            imageSection.classList.add("hidden");
+            document.getElementById("imageInput").value = "";
+        } else {
+            imageSection.classList.remove("hidden");
+            textSection.classList.add("hidden");
+            document.getElementById("textInput").value = "";
+        }
+    });
+});
+
+watermarkBtn.addEventListener("click", async () => {
+
+    if (!selectedPDF) {
+        alert("Please upload a PDF file.");
+        return;
+    }
+
+    const selectedType = document.querySelector('input[name="wmType"]:checked').value;
+
+    const formData = new FormData();
+    formData.append("file", selectedPDF);
+
+    if (selectedType === "text") {
+        const textValue = document.getElementById("textInput").value.trim();
+        if (!textValue) {
+            alert("Please enter watermark text.");
+            return;
+        }
+        formData.append("text", textValue);
+    } else {
+        const imageFile = document.getElementById("imageInput").files[0];
+        if (!imageFile) {
+            alert("Please upload an image watermark.");
+            return;
+        }
+        formData.append("image", imageFile);
+    }
+
+    loader.classList.remove("hidden");
+
+    const response = await fetch("/watermark", {
+        method: "POST",
+        body: formData
+    });
+
+    loader.classList.add("hidden");
+
+    if (!response.ok) {
+        const err = await response.json();
+        alert(err.error || "Watermark failed.");
+        return;
+    }
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "watermarked.pdf";
+    a.click();
+});
+</script>
+
+{% endblock %}

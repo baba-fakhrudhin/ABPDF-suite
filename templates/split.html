@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="text-center mb-10">
+    <h1 class="text-4xl font-extrabold mb-4 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+        Split PDF
+    </h1>
+    <p class="text-gray-500 text-lg">
+        Extract specific pages from your PDF file.
+    </p>
+</div>
+
+<div class="bg-white p-10 rounded-3xl shadow-2xl max-w-2xl mx-auto border border-gray-100">
+
+    <form id="splitForm" class="space-y-6">
+
+        <!-- File Upload -->
+        <div>
+            <label class="block font-semibold mb-2">Upload PDF</label>
+            <input type="file" name="file" accept=".pdf" required
+                class="w-full border p-4 rounded-xl focus:ring-2 focus:ring-blue-500 transition">
+        </div>
+
+        <!-- Page Input -->
+        <div>
+            <label class="block font-semibold mb-2">Pages to Extract</label>
+            <input 
+                type="text" 
+                name="pages" 
+                id="pagesInput"
+                placeholder="Example: 1-3 or 2,4,6 or 1-5,8"
+                required
+                class="w-full border p-4 rounded-xl focus:ring-2 focus:ring-purple-500 transition"
+            >
+            <p class="text-sm text-gray-400 mt-2">
+                Formats supported: 1 | 1-3 | 1,3,5 | 2-4,7
+            </p>
+        </div>
+
+        <!-- Submit Button -->
+        <button type="submit"
+            class="w-full py-4 rounded-2xl text-white font-bold text-lg 
+                   bg-gradient-to-r from-blue-600 to-purple-600 
+                   hover:scale-105 hover:shadow-xl transition duration-300">
+            Split PDF
+        </button>
+    </form>
+
+    <!-- Loader -->
+    <div id="loader" class="hidden mt-8 text-center">
+        <div class="animate-spin h-14 w-14 border-4 border-purple-500 border-t-transparent rounded-full mx-auto"></div>
+        <p class="mt-4 text-gray-600 font-medium">Processing your PDF...</p>
+    </div>
+
+</div>
+
+<script>
+document.getElementById("splitForm").addEventListener("submit", async function(e) {
+    e.preventDefault();
+
+    const loader = document.getElementById("loader");
+    loader.classList.remove("hidden");
+
+    const form = e.target;
+    const formData = new FormData();
+
+    const fileInput = form.querySelector('input[name="file"]');
+    const pagesInput = form.querySelector('input[name="pages"]');
+
+    formData.append("file", fileInput.files[0]);
+    formData.append("pages", pagesInput.value);
+
+    try {
+        const response = await fetch("/split", {
+            method: "POST",
+            body: formData
+        });
+
+        loader.classList.add("hidden");
+
+        if (!response.ok) {
+            const err = await response.json();
+            alert(err.error || "Something went wrong");
+            return;
+        }
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "split.pdf";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+
+    } catch (error) {
+        loader.classList.add("hidden");
+        alert("Server error. Please try again.");
+    }
+});
+</script>
+
+{% endblock %}
