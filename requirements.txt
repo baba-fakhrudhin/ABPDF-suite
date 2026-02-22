@@ -7,3 +7,4 @@ pdf2docx
 docx2pdf
 jinja2
 python-multipart
+itsdangerous
