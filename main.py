@@ -16,9 +16,49 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi import Request
+from fastapi import HTTPException, Depends
+from fastapi.responses import RedirectResponse
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
+import secrets
 
+PORT = int(os.environ.get("PORT", 10000))
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("main:app", host="0.0.0.0", port=PORT)
+    
 templates = Jinja2Templates(directory="templates")
 app = FastAPI(title="Document Converter Suite")
+
+
+security = HTTPBasic()
+USERS_FILE = "users.txt"
+
+
+def read_users():
+    users = {}
+    if not os.path.exists(USERS_FILE):
+        return users
+    with open(USERS_FILE, "r") as f:
+        for line in f:
+            username, password = line.strip().split(" ")
+            users[username] = password
+    return users
+
+
+def save_user(username: str, password: str):
+    with open(USERS_FILE, "a") as f:
+        f.write(f"{username} {password}\n")
+
+
+def authenticate(credentials: HTTPBasicCredentials = Depends(security)):
+    users = read_users()
+    correct_password = users.get(credentials.username)
+
+    if not correct_password or not secrets.compare_digest(correct_password, credentials.password):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+
+    return credentials.username
 
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
@@ -84,8 +124,26 @@ async def save_upload_file(upload_file: UploadFile) -> str:
         f.write(contents)
     return file_path
 
+@app.post("/register")
+async def register(username: str = Form(...), password: str = Form(...)):
+    users = read_users()
+
+    if username in users:
+        return {"error": "User already exists"}
+
+    save_user(username, password)
+    return {"message": "User registered successfully"}
+@app.post("/login")
+async def login(credentials: HTTPBasicCredentials = Depends(security)):
+    authenticate(credentials)
+    return {"message": "Login successful"}
+@app.get("/dashboard")
+async def dashboard(username: str = Depends(authenticate)):
+    return {"message": f"Welcome {username}"}
+
 @app.post("/merge")
 async def merge_pdfs(
+    username: str = Depends(authenticate),
     file1: UploadFile = File(None),
     file2: UploadFile = File(None),
     file3: UploadFile = File(None)
@@ -119,13 +177,7 @@ async def merge_pdfs(
     except Exception as e:
         return {"error": f"Merge failed: {str(e)}"}
 
-import os
 
-PORT = int(os.environ.get("PORT", 10000))
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=PORT)
 
 @app.post("/split")
 async def split_pdf(
