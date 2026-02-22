@@ -8,6 +8,16 @@
 <body class="bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 min-h-screen">
 
 <nav class="px-10 py-6 flex justify-between items-center">
+    {% if request.session.get("user") %}
+    <div class="absolute top-4 right-6">
+        <span class="mr-4 font-semibold">
+            {{ request.session.get("user") }}
+        </span>
+        <a href="/logout" class="text-red-500 font-bold hover:underline">
+            Logout
+        </a>
+    </div>
+{% endif %}
     <a href="/" class="text-2xl font-extrabold bg-gradient-to-r from-indigo-600 to-pink-500 bg-clip-text text-transparent">
         PDF Suite
     </a>
