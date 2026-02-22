@@ -1,10 +1,17 @@
 {% extends "base.html" %}
 {% block content %}
 
-<div class="max-w-md mx-auto bg-white p-8 rounded-2xl shadow-lg">
-    <h2 class="text-2xl font-bold mb-6 text-center">Register</h2>
+<div class="max-w-md mx-auto bg-white p-8 rounded-3xl shadow-xl mt-20">
 
-    <form method="post" action="/register" class="space-y-4">
+    <h2 class="text-3xl font-bold text-center mb-6">Register</h2>
+
+    {% if error %}
+        <div class="bg-red-100 text-red-600 p-3 rounded-lg mb-4 text-center">
+            {{ error }}
+        </div>
+    {% endif %}
+
+    <form method="POST" action="/register" class="space-y-5">
         <input type="text" name="username" placeholder="Username" required
             class="w-full border p-3 rounded-xl">
 
@@ -12,10 +19,21 @@
             class="w-full border p-3 rounded-xl">
 
         <button type="submit"
-            class="w-full py-3 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl font-bold">
+            class="w-full py-3 rounded-xl text-white font-bold bg-gradient-to-r from-green-500 to-teal-600 hover:scale-105 transition">
             Register
         </button>
     </form>
+
+    <div class="text-center mt-6">
+        <p class="text-gray-600">
+            Already have an account?
+        </p>
+        <a href="/login-page"
+           class="text-blue-600 font-semibold hover:underline">
+            Login here
+        </a>
+    </div>
+
 </div>
 
 {% endblock %}
