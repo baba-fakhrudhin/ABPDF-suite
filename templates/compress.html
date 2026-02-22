@@ -59,7 +59,8 @@ document.getElementById("compressForm").addEventListener("submit", async functio
 
     const response = await fetch("/compress", {
         method: "POST",
-        body: formData
+        body: formData,
+        credentials: "include"
     });
 
     loader.classList.add("hidden");
