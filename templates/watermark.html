@@ -129,7 +129,8 @@ watermarkBtn.addEventListener("click", async () => {
 
     const response = await fetch("/watermark", {
         method: "POST",
-        body: formData
+        body: formData,
+        credentials: "include"
     });
 
     loader.classList.add("hidden");
