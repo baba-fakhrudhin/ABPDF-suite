@@ -89,15 +89,20 @@ async def register(request: Request, username: str = Form(...), password: str = 
 async def login(request: Request, username: str = Form(...), password: str = Form(...)):
     users = read_users()
 
-    if username not in users or users[username] != password:
+    if username not in users:
         return templates.TemplateResponse(
             "login.html",
-            {"request": request, "error": "Invalid credentials"}
+            {"request": request, "error": "User not found"}
+        )
+
+    if users[username] != password:
+        return templates.TemplateResponse(
+            "login.html",
+            {"request": request, "error": "Incorrect password"}
         )
 
     request.session["user"] = username
     return RedirectResponse("/", status_code=303)
-
 @app.get("/logout")
 async def logout(request: Request):
     request.session.clear()
