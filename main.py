@@ -249,12 +249,14 @@ async def compress_pdf(request: Request, file: UploadFile = File(...), level: Co
 async def watermark_pdf(
     request: Request,
     file: UploadFile = File(...),
-    text: str | None = Form(None)
+    text: str | None = Form(None),
+    image: UploadFile = File(None)
 ):
     if not require_login(request):
         return {"error": "Unauthorized"}
 
     path = await save_upload_file(file)
+
     reader = PdfReader(path)
     first_page = reader.pages[0]
     page_width = float(first_page.mediabox.width)
@@ -263,7 +265,30 @@ async def watermark_pdf(
     watermark_path = os.path.join(TEMP_DIR, f"wm_{uuid.uuid4()}.pdf")
     c = canvas.Canvas(watermark_path, pagesize=(page_width, page_height))
 
-    if text:
+    # IMAGE WATERMARK
+    if image and image.filename:
+        img_path = await save_upload_file(image)
+
+        c.saveState()
+        c.setFillAlpha(0.15)
+
+        img_width = page_width * 0.4
+        img_height = page_height * 0.4
+
+        c.drawImage(
+            img_path,
+            (page_width - img_width) / 2,
+            (page_height - img_height) / 2,
+            width=img_width,
+            height=img_height,
+            preserveAspectRatio=True,
+            mask="auto"
+        )
+
+        c.restoreState()
+
+    # TEXT WATERMARK
+    elif text and text.strip():
         diagonal = (page_width**2 + page_height**2) ** 0.5
         font_size = int(diagonal / 18)
 
@@ -275,10 +300,14 @@ async def watermark_pdf(
         c.drawCentredString(0, 0, text)
         c.restoreState()
 
+    else:
+        return {"error": "Provide text or image watermark"}
+
     c.save()
 
     watermark_reader = PdfReader(watermark_path)
     watermark_page = watermark_reader.pages[0]
+
     writer = PdfWriter()
 
     for page in reader.pages:
@@ -290,4 +319,8 @@ async def watermark_pdf(
     with open(output_path, "wb") as f:
         writer.write(f)
 
-    return FileResponse(output_path, media_type="application/pdf", filename="watermarked.pdf")
+    return FileResponse(
+        output_path,
+        media_type="application/pdf",
+        filename="watermarked.pdf"
+    )
