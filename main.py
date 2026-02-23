@@ -244,7 +244,6 @@ async def compress_pdf(request: Request, file: UploadFile = File(...), level: Co
     return FileResponse(output_path, media_type="application/pdf", filename="compressed.pdf")
 
 # -------------------- WATERMARK --------------------
-
 @app.post("/watermark")
 async def watermark_pdf(
     request: Request,
@@ -255,72 +254,76 @@ async def watermark_pdf(
     if not require_login(request):
         return {"error": "Unauthorized"}
 
-    path = await save_upload_file(file)
+    try:
+        path = await save_upload_file(file)
 
-    reader = PdfReader(path)
-    first_page = reader.pages[0]
-    page_width = float(first_page.mediabox.width)
-    page_height = float(first_page.mediabox.height)
+        reader = PdfReader(path)
+        first_page = reader.pages[0]
+        page_width = float(first_page.mediabox.width)
+        page_height = float(first_page.mediabox.height)
 
-    watermark_path = os.path.join(TEMP_DIR, f"wm_{uuid.uuid4()}.pdf")
-    c = canvas.Canvas(watermark_path, pagesize=(page_width, page_height))
+        watermark_path = os.path.join(TEMP_DIR, f"wm_{uuid.uuid4()}.pdf")
+        c = canvas.Canvas(watermark_path, pagesize=(page_width, page_height))
 
-    # IMAGE WATERMARK
-    if image and image.filename:
-        img_path = await save_upload_file(image)
+        # IMAGE WATERMARK
+        if image and image.filename:
+            img_path = await save_upload_file(image)
 
-        c.saveState()
-        c.setFillAlpha(0.15)
+            c.saveState()
+            c.setFillAlpha(0.2)
 
-        img_width = page_width * 0.4
-        img_height = page_height * 0.4
+            img_width = page_width * 0.4
+            img_height = page_height * 0.4
 
-        c.drawImage(
-            img_path,
-            (page_width - img_width) / 2,
-            (page_height - img_height) / 2,
-            width=img_width,
-            height=img_height,
-            preserveAspectRatio=True,
-            mask="auto"
+            c.drawImage(
+                img_path,
+                (page_width - img_width) / 2,
+                (page_height - img_height) / 2,
+                width=img_width,
+                height=img_height,
+                preserveAspectRatio=True,
+                mask="auto"
+            )
+
+            c.restoreState()
+
+        # TEXT WATERMARK
+        elif text and text.strip():
+            diagonal = (page_width**2 + page_height**2) ** 0.5
+            font_size = int(diagonal / 18)
+
+            c.saveState()
+            c.setFont("Helvetica-Bold", font_size)
+            c.setFillAlpha(0.2)
+            c.translate(page_width / 2, page_height / 2)
+            c.rotate(-45)
+            c.drawCentredString(0, 0, text)
+            c.restoreState()
+
+        else:
+            return {"error": "Provide text or image watermark"}
+
+        c.save()
+
+        watermark_reader = PdfReader(watermark_path)
+        watermark_page = watermark_reader.pages[0]
+
+        writer = PdfWriter()
+
+        for page in reader.pages:
+            page.merge_page(watermark_page)
+            writer.add_page(page)
+
+        output_path = os.path.join(OUTPUT_DIR, f"watermarked_{uuid.uuid4()}.pdf")
+
+        with open(output_path, "wb") as f:
+            writer.write(f)
+
+        return FileResponse(
+            output_path,
+            media_type="application/pdf",
+            filename="watermarked.pdf"
         )
 
-        c.restoreState()
-
-    # TEXT WATERMARK
-    elif text and text.strip():
-        diagonal = (page_width**2 + page_height**2) ** 0.5
-        font_size = int(diagonal / 18)
-
-        c.saveState()
-        c.setFont("Helvetica-Bold", font_size)
-        c.setFillAlpha(0.15)
-        c.translate(page_width / 2, page_height / 2)
-        c.rotate(-45)
-        c.drawCentredString(0, 0, text)
-        c.restoreState()
-
-    else:
-        return {"error": "Provide text or image watermark"}
-
-    c.save()
-
-    watermark_reader = PdfReader(watermark_path)
-    watermark_page = watermark_reader.pages[0]
-
-    writer = PdfWriter()
-
-    for page in reader.pages:
-        page.merge_page(watermark_page)
-        writer.add_page(page)
-
-    output_path = os.path.join(OUTPUT_DIR, f"watermarked_{uuid.uuid4()}.pdf")
-
-    with open(output_path, "wb") as f:
-        writer.write(f)
-
-    return FileResponse(
-        output_path,
-        media_type="application/pdf",
-        filename="watermarked.pdf"
-    )
+    except Exception as e:
+        return {"error": f"Watermark failed: {str(e)}"}
