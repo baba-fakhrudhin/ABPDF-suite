@@ -63,7 +63,6 @@ Add a text or image watermark to your PDF.
     </div>
 
 </div>
-
 <script>
 const pdfDrop = document.getElementById("pdfDrop");
 const pdfFile = document.getElementById("pdfFile");
@@ -84,7 +83,6 @@ pdfFile.addEventListener("change", () => {
 
 radios.forEach(radio => {
     radio.addEventListener("change", () => {
-
         if (radio.value === "text") {
             textSection.classList.remove("hidden");
             imageSection.classList.add("hidden");
@@ -127,26 +125,42 @@ watermarkBtn.addEventListener("click", async () => {
 
     loader.classList.remove("hidden");
 
-    const response = await fetch("/watermark", {
-        method: "POST",
-        body: formData,
-        credentials: "include"
-    });
+    try {
+        const response = await fetch("/watermark", {
+            method: "POST",
+            body: formData,
+            credentials: "include"
+        });
 
-    loader.classList.add("hidden");
+        const contentType = response.headers.get("content-type");
 
-    if (!response.ok) {
-        const err = await response.json();
-        alert(err.error || "Watermark failed.");
-        return;
+        loader.classList.add("hidden");
+
+        if (contentType && contentType.includes("application/json")) {
+            const err = await response.json();
+            alert(err.error || "Watermark failed.");
+            return;
+        }
+
+        if (!response.ok) {
+            alert("Watermark failed.");
+            return;
+        }
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "watermarked.pdf";
+        a.click();
+
+        window.URL.revokeObjectURL(url);
+
+    } catch (error) {
+        loader.classList.add("hidden");
+        alert("Server error. Check backend logs.");
     }
-
-    const blob = await response.blob();
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "watermarked.pdf";
-    a.click();
 });
 </script>
 
