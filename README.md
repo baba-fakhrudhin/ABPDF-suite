@@ -10,10 +10,9 @@ text and image watermarking a pdf
 pdf_to_word converter
 word_to_pdf converter
 
-#### Note
-The logic and code everything is ready for the pdf to word and vice versa converter but the environment doesnt support my modules like docx2pdf which require ms word 
 
 #### Respected Judges 
-My UI is clean and implemented all the features requested expect the word to pdf converter and vice versa although the conversion needs an virtual document editor like ms word which doesnt support by my hosting service (render) also i can implement the both with right environment 
+I implemented user friendly UI all the features requested ☺️☺️, for a document converter suite like ILovePdf
+Our Team Name is "Team AB" so i named my project ABPDF-Suite 
 
 ### Thank You
