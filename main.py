@@ -103,6 +103,20 @@ async def login(request: Request, username: str = Form(...), password: str = For
 
     request.session["user"] = username
     return RedirectResponse("/", status_code=303)
+    
+@app.get("/download/{filename}")
+async def download_file(filename: str):
+    file_path = os.path.join(OUTPUT_DIR, filename)
+
+    if not os.path.exists(file_path):
+        return {"error": "File not found"}
+
+    return FileResponse(
+        file_path,
+        media_type="application/pdf",
+        filename=filename
+    )
+    
 @app.get("/logout")
 async def logout(request: Request):
     request.session.clear()
@@ -224,25 +238,42 @@ class CompressionLevel(str, Enum):
     low = "low"
     moderate = "moderate"
     high = "high"
-
+    
 @app.post("/compress")
-async def compress_pdf(request: Request, file: UploadFile = File(...), level: CompressionLevel = Form(CompressionLevel.moderate)):
+async def compress_pdf(
+    request: Request,
+    file: UploadFile = File(...),
+    level: CompressionLevel = Form(CompressionLevel.moderate)
+):
     if not require_login(request):
         return {"error": "Unauthorized"}
 
-    path = await save_upload_file(file)
-    output_path = os.path.join(OUTPUT_DIR, f"compressed_{uuid.uuid4()}.pdf")
+    try:
+        path = await save_upload_file(file)
+        output_filename = f"compressed_{uuid.uuid4()}.pdf"
+        output_path = os.path.join(OUTPUT_DIR, output_filename)
 
-    with pikepdf.open(path) as pdf:
-        pdf.remove_unreferenced_resources()
-        pdf.save(
-            output_path,
-            compress_streams=True,
-            object_stream_mode=pikepdf.ObjectStreamMode.generate
-        )
+        original_size = os.path.getsize(path)
 
-    return FileResponse(output_path, media_type="application/pdf", filename="compressed.pdf")
+        with pikepdf.open(path) as pdf:
+            pdf.remove_unreferenced_resources()
+            pdf.save(
+                output_path,
+                compress_streams=True,
+                object_stream_mode=pikepdf.ObjectStreamMode.generate
+            )
 
+        compressed_size = os.path.getsize(output_path)
+
+        return {
+            "success": True,
+            "original_size": original_size,
+            "compressed_size": compressed_size,
+            "download_url": f"/download/{output_filename}"
+        }
+
+    except Exception as e:
+        return {"error": f"Compression failed: {str(e)}"}
 # -------------------- WATERMARK --------------------
 @app.post("/watermark")
 async def watermark_pdf(
