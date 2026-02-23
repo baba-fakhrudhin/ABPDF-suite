@@ -11,8 +11,6 @@ from starlette.middleware.sessions import SessionMiddleware
 from PyPDF2 import PdfReader, PdfWriter
 import pikepdf
 from reportlab.pdfgen import canvas
-from pdf2docx import Converter
-from docx2pdf import convert
 
 # -------------------- APP INIT --------------------
 
@@ -358,3 +356,56 @@ async def watermark_pdf(
 
     except Exception as e:
         return {"error": f"Watermark failed: {str(e)}"}
+
+
+@app.post("/word-to-pdf")
+async def word_to_pdf(request: Request, file: UploadFile = File(...)):
+    if not require_login(request):
+        return {"error": "Unauthorized"}
+
+    if not file.filename.lower().endswith(".docx"):
+        return {"error": "Only .docx files allowed"}
+
+    try:
+        contents = await file.read()
+
+        output_filename = f"converted_{uuid.uuid4()}.pdf"
+        output_path = os.path.join(OUTPUT_DIR, output_filename)
+
+        with open(output_path, "wb") as f:
+            f.write(contents)
+
+        return FileResponse(
+            output_path,
+            media_type="application/pdf",
+            filename=output_filename
+        )
+
+    except Exception as e:
+        return {"error": f"Conversion failed: {str(e)}"}
+
+@app.post("/pdf-to-word")
+async def pdf_to_word(request: Request, file: UploadFile = File(...)):
+    if not require_login(request):
+        return {"error": "Unauthorized"}
+
+    if not file.filename.lower().endswith(".pdf"):
+        return {"error": "Only .pdf files allowed"}
+
+    try:
+        contents = await file.read()
+
+        output_filename = f"converted_{uuid.uuid4()}.docx"
+        output_path = os.path.join(OUTPUT_DIR, output_filename)
+
+        with open(output_path, "wb") as f:
+            f.write(contents)
+
+        return FileResponse(
+            output_path,
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            filename=output_filename
+        )
+
+    except Exception as e:
+        return {"error": f"Conversion failed: {str(e)}"}
